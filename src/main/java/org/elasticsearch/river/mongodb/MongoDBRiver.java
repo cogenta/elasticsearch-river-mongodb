@@ -18,10 +18,6 @@
  */
 package org.elasticsearch.river.mongodb;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.elasticsearch.client.Requests.indexRequest;
-import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
-
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -30,7 +26,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import java.util.regex.Pattern;
+import static org.elasticsearch.client.Requests.deleteRequest;
+import static org.elasticsearch.client.Requests.indexRequest;
+import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
 import org.bson.types.BSONTimestamp;
 import org.bson.types.ObjectId;
