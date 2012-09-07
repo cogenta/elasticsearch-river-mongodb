@@ -597,7 +597,8 @@ public class MongoDBRiver extends AbstractRiverComponent implements River {
 		/*
 		 * Remove fscynlock and unlock - https://github.com/richardwilly98/elasticsearch-river-mongodb/issues/17
 		 */
-		private DBCursor processFullCollection() {
+		private DBCursor processFullCollection() 
+            throws InterruptedException {
 //			CommandResult lockResult = mongo.fsyncAndLock();
 //			if (lockResult.ok()) {
 				try {
@@ -617,7 +618,8 @@ public class MongoDBRiver extends AbstractRiverComponent implements River {
 		}
 
 		@SuppressWarnings("unchecked")
-		private void processOplogEntry(final DBObject entry) {
+		private void processOplogEntry(final DBObject entry)
+            throws InterruptedException {
 			String operation = entry.get(OPLOG_OPERATION).toString();
 			String namespace = entry.get(OPLOG_NAMESPACE).toString();
 			BSONTimestamp oplogTimestamp = (BSONTimestamp) entry
@@ -694,7 +696,8 @@ public class MongoDBRiver extends AbstractRiverComponent implements River {
 
 		@SuppressWarnings("unchecked")
 		private void addQueryToStream(final String operation,
-				final BSONTimestamp currentTimestamp, final DBObject update) {
+				final BSONTimestamp currentTimestamp, final DBObject update)
+            throws InterruptedException {
 			for (DBObject item : slurpedCollection.find(update)) {
 				addToStream(operation, currentTimestamp, item.toMap());
 			}
@@ -702,7 +705,7 @@ public class MongoDBRiver extends AbstractRiverComponent implements River {
 
 		private void addToStream(final String operation,
 				final BSONTimestamp currentTimestamp,
-				final Map<String, Object> data) {
+				final Map<String, Object> data) throws InterruptedException {
 			data.put(OPLOG_TIMESTAMP, currentTimestamp);
 			data.put(OPLOG_OPERATION, operation);
 
