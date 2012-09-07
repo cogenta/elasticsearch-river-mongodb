@@ -427,9 +427,9 @@ public class MongoDBRiver extends AbstractRiverComponent implements River {
 					if (logger.isDebugEnabled()) {
 						logger.debug("river-mongodb indexer interrupted");
 					}
-				} catch (Exception ex) {
-						logger.warn("Unhandled exception in Indexer.Run()", ex);
-						throw;
+				} catch (Throwable ex) {
+                    logger.warn("Unhandled exception in Indexer.Run()", ex);
+                    throw new Error(ex);
 				}
 			}
 		}
@@ -587,9 +587,9 @@ public class MongoDBRiver extends AbstractRiverComponent implements River {
 					if (logger.isDebugEnabled()) {
 						logger.debug("river-mongodb slurper interrupted");
 					}
-				} catch (Exception ex) {
-						logger.warn("Unhandled exception in Slurper.Run()", ex);
-						throw;
+				} catch (Throwable ex) {
+                    logger.warn("Unhandled exception in Slurper.Run()", ex);
+                    throw new Error(ex);
 				}
 			}
 		}
