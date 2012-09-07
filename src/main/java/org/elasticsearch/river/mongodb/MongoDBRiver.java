@@ -706,7 +706,7 @@ public class MongoDBRiver extends AbstractRiverComponent implements River {
 			data.put(OPLOG_TIMESTAMP, currentTimestamp);
 			data.put(OPLOG_OPERATION, operation);
 
-			stream.put(data);
+			stream.add(data);
 		}
 
 	}
