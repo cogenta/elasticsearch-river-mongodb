@@ -139,12 +139,14 @@ public class MongoDBRiver extends AbstractRiverComponent implements River {
 	protected final String typeName;
 	protected final int bulkSize;
 	protected final TimeValue bulkTimeout;
+	private final int throttleSize;
 
 	protected Thread tailerThread;
 	protected Thread indexerThread;
 	protected volatile boolean active = true;
 
-	private final TransferQueue<Map<String, Object>> stream = new LinkedTransferQueue<Map<String, Object>>();
+	//private final TransferQueue<Map<String, Object>> stream = new LinkedTransferQueue<Map<String, Object>>();
+	private final BlockingQueue<Map<String, Object>> stream;
 
 	@SuppressWarnings("unchecked")
 	@Inject
@@ -278,29 +280,43 @@ public class MongoDBRiver extends AbstractRiverComponent implements River {
 		}
 		mongoOplogNamespace = mongoDb + "." + mongoCollection;
 
-		if (settings.settings().containsKey(INDEX_OBJECT)) {
-			Map<String, Object> indexSettings = (Map<String, Object>) settings
-					.settings().get(INDEX_OBJECT);
-			indexName = XContentMapValues.nodeStringValue(
-					indexSettings.get(NAME_FIELD), mongoDb);
-			typeName = XContentMapValues.nodeStringValue(
-					indexSettings.get(TYPE_FIELD), mongoDb);
-			bulkSize = XContentMapValues.nodeIntegerValue(
-					indexSettings.get(BULK_SIZE_FIELD), 100);
-			if (indexSettings.containsKey(BULK_TIMEOUT_FIELD)) {
-				bulkTimeout = TimeValue.parseTimeValue(
-						XContentMapValues.nodeStringValue(
-								indexSettings.get(BULK_TIMEOUT_FIELD), "10ms"),
+		if (settings.settings().containsKey(INDEX_OBJECT)) 
+		{
+			Map<String, Object> indexSettings = (Map<String, Object>) settings.settings().get(INDEX_OBJECT);
+					
+			indexName = XContentMapValues.nodeStringValue(indexSettings.get(NAME_FIELD), mongoDb);
+			typeName = XContentMapValues.nodeStringValue(indexSettings.get(TYPE_FIELD), mongoDb);
+			bulkSize = XContentMapValues.nodeIntegerValue(indexSettings.get(BULK_SIZE_FIELD), 100);
+			
+			if (indexSettings.containsKey(BULK_TIMEOUT_FIELD)) 
+			{
+				bulkTimeout = TimeValue.parseTimeValue(XContentMapValues.nodeStringValue(indexSettings.get(BULK_TIMEOUT_FIELD), "10ms"),
 						TimeValue.timeValueMillis(10));
-			} else {
+			} else 
+			{
 				bulkTimeout = TimeValue.timeValueMillis(10);
 			}
-		} else {
+			
+			throttleSize = XContentMapValues.nodeIntegerValue(indexSettings.get("throttle_size"), bulkSize * 5);
+		} 
+		else {
 			indexName = mongoDb;
 			typeName = mongoDb;
 			bulkSize = 100;
 			bulkTimeout = TimeValue.timeValueMillis(10);
+			throttleSize = bulkSize * 5;
 		}
+		
+		logger.info("Mongodb river using throttle_size: [{}]", throttleSize);
+		
+		if (throttleSize == -1) 
+		{
+            stream = new LinkedTransferQueue<Map<String, Object>>();
+        } 
+		else 
+		{
+            stream = new ArrayBlockingQueue<Map<String, Object>>(throttleSize);
+        }
 	}
 
 	@Override
