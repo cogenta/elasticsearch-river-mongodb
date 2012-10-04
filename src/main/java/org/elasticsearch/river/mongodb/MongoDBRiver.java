@@ -119,6 +119,7 @@ public class MongoDBRiver extends AbstractRiverComponent implements River {
 	public final static String OPLOG_INSERT_OPERATION = "i";
 	public final static String OPLOG_DELETE_OPERATION = "d";
 	public final static String OPLOG_TIMESTAMP = "ts";
+	public final static String ID_FIELD = "_id";
 
 	protected final Client client;
 
@@ -436,7 +437,7 @@ public class MongoDBRiver extends AbstractRiverComponent implements River {
 
 		private BSONTimestamp updateBulkRequest(final BulkRequestBuilder bulk,
 				final Map<String, Object> data) {
-			if (data.get("_id") == null) {
+			if (data.get(ID_FIELD) == null) {
 				logger.warn(
 						"Cannot get object id. Skip the current item: [{}]",
 						data);
@@ -445,7 +446,7 @@ public class MongoDBRiver extends AbstractRiverComponent implements River {
 			BSONTimestamp lastTimestamp = (BSONTimestamp) data
 					.get(OPLOG_TIMESTAMP);
 			String operation = data.get(OPLOG_OPERATION).toString();
-			String objectId = data.get("_id").toString();
+			String objectId = data.get(ID_FIELD).toString();
 			data.remove(OPLOG_TIMESTAMP);
 			data.remove(OPLOG_OPERATION);
 			try {
@@ -637,7 +638,7 @@ public class MongoDBRiver extends AbstractRiverComponent implements River {
 
 			if (mongoGridFS && namespace.endsWith(".files")
 					&& ("i".equals(operation) || "u".equals(operation))) {
-				String objectId = object.get("_id").toString();
+				String objectId = object.get(ID_FIELD).toString();
 				GridFS grid = new GridFS(mongo.getDB(mongoDb), mongoCollection);
 				GridFSDBFile file = grid.findOne(new ObjectId(objectId));
 				if (file != null) {
@@ -650,15 +651,26 @@ public class MongoDBRiver extends AbstractRiverComponent implements River {
 			}
 
 			if (object instanceof GridFSDBFile) {
-				logger.info("Add attachment: {}", object.get("_id"));
+				logger.info("Add attachment: {}", object.get(ID_FIELD));
 				HashMap<String, Object> data = new HashMap<String, Object>();
 				data.put("attachment", object);
-				data.put("_id", object.get("_id"));
+				data.put(ID_FIELD, object.get(ID_FIELD));
 				addToStream(operation, oplogTimestamp, data);
 			} else {
 				if ("u".equals(operation)) {
-					DBObject update = (DBObject) entry.get(OPLOG_UPDATE);
-					addQueryToStream(operation, oplogTimestamp, update);
+					// Does the update op contain the id?
+					String id = object.get(ID_FIELD).toString();
+					if (id == null)
+					{
+						// Oplog entry contains the update command, so need to .find() the document
+						DBObject update = (DBObject) entry.get(OPLOG_UPDATE);
+						addQueryToStream(operation, oplogTimestamp, update);
+					}
+					else
+					{
+						// Update contains the whole document already
+						addToStream(operation, oplogTimestamp, object.toMap());
+					}
 				} else {
 					addToStream(operation, oplogTimestamp, object.toMap());
 				}
